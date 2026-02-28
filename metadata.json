@@ -1,0 +1,5 @@
+{
+  "name": "Compass: Trade Interpretation",
+  "description": "A pre-execution trade consequence interpreter for retail investors.",
+  "requestFramePermissions": []
+}
