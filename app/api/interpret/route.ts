@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { COMPASS_SYSTEM_PROMPT } from '@/docs/compassPrompt';
+import {
+  computeCallOptionFacts,
+  computeStockBuyFacts,
+  validateCallOptionInput,
+  validateStockBuyInput,
+  type CallOptionInput,
+  type StockBuyInput,
+} from '@/lib/compute';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
@@ -17,14 +25,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate required fields
+    if (body.type === 'call_option') {
+      const validationError = validateCallOptionInput(body);
+      if (validationError) {
+        return NextResponse.json({ error: validationError }, { status: 400 });
+      }
+    } else {
+      const validationError = validateStockBuyInput(body);
+      if (validationError) {
+        return NextResponse.json({ error: validationError }, { status: 400 });
+      }
+    }
+
+    // Compute facts deterministically
+    const facts =
+      body.type === 'call_option'
+        ? computeCallOptionFacts(body as CallOptionInput)
+        : computeStockBuyFacts(body as StockBuyInput);
+
+    // Send facts + input to LLM for narration only
+    const userMessage = JSON.stringify({ input: body, facts });
+
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-20250514',
-      max_tokens: 1024,
+      max_tokens: 1500,
       system: COMPASS_SYSTEM_PROMPT,
       messages: [
         {
           role: 'user',
-          content: JSON.stringify(body),
+          content: userMessage,
         },
       ],
     });
@@ -37,7 +67,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Strip markdown code fences if the model wraps JSON in ```json ... ```
+    // Strip markdown code fences if present
     let rawText = textBlock.text.trim();
     if (rawText.startsWith('```')) {
       rawText = rawText.replace(/^```(?:json)?\s*\n?/, '').replace(/\n?```\s*$/, '');

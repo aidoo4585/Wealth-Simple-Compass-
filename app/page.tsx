@@ -9,6 +9,7 @@ import { SegmentedControl } from '@/components/SegmentedControl';
 
 type Mode = 'options' | 'averaging_up';
 type Step = 'review' | 'compass' | 'success';
+type Severity = 'neutral' | 'warning' | 'critical';
 
 const OPTIONS_PAYLOAD = {
   type: 'call_option',
@@ -32,23 +33,37 @@ const AVERAGING_UP_PAYLOAD = {
   buy_price: 200,
 };
 
-const OPTIONS_LABELS = [
-  { key: 'the_reality', title: 'The Reality' },
-  { key: 'break_even', title: 'Break-Even' },
-  { key: 'max_loss', title: 'Max Loss' },
-  { key: 'stock_comparison', title: 'Stock Comparison' },
-  { key: 'sensitivity', title: 'Sensitivity' },
+interface CardConfig {
+  key: string;
+  title: string;
+  severity: Severity;
+}
+
+const OPTIONS_CARDS: CardConfig[] = [
+  { key: 'the_reality', title: 'The Reality', severity: 'neutral' },
+  { key: 'break_even', title: 'Break-Even', severity: 'warning' },
+  { key: 'max_loss', title: 'Max Loss', severity: 'critical' },
+  { key: 'notional_and_leverage', title: 'Notional & Leverage', severity: 'warning' },
+  { key: 'stock_comparison', title: 'Stock Comparison', severity: 'neutral' },
+  { key: 'time_risk', title: 'Time Risk', severity: 'warning' },
+  { key: 'sensitivity', title: 'Sensitivity', severity: 'neutral' },
 ];
 
-const AVERAGING_UP_LABELS = [
-  { key: 'new_reality', title: 'New Reality' },
-  { key: 'return_shift_explanation', title: 'Return Shift' },
-  { key: 'structural_change', title: 'Structural Change' },
-  { key: 'downside_scenario', title: 'Downside Scenario' },
+const AVERAGING_UP_CARDS: CardConfig[] = [
+  { key: 'new_reality', title: 'New Reality', severity: 'neutral' },
+  { key: 'return_dilution', title: 'Return Dilution', severity: 'critical' },
+  { key: 'structural_change', title: 'Capital Committed', severity: 'warning' },
+  { key: 'downside_scenario', title: 'Downside Scenario', severity: 'warning' },
+  { key: 'return_shift_explanation', title: 'Return Shift', severity: 'neutral' },
 ];
 
-interface InterpretationData {
-  [key: string]: string | string[];
+interface CardData {
+  headline: string;
+  body: string;
+}
+
+interface InterpretationResponse {
+  [key: string]: CardData | string[] | string;
   acknowledgments: string[];
 }
 
@@ -56,7 +71,7 @@ export default function CompassApp() {
   const [step, setStep] = useState<Step>('review');
   const [mode, setMode] = useState<Mode>('options');
   const [checkedItems, setCheckedItems] = useState<boolean[]>([false, false, false]);
-  const [data, setData] = useState<InterpretationData | null>(null);
+  const [data, setData] = useState<InterpretationResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -111,7 +126,7 @@ export default function CompassApp() {
     setStep('success');
   };
 
-  const currentLabels = mode === 'options' ? OPTIONS_LABELS : AVERAGING_UP_LABELS;
+  const currentCards = mode === 'options' ? OPTIONS_CARDS : AVERAGING_UP_CARDS;
   const allChecked = checkedItems.every(Boolean);
 
   const toggleCheck = (index: number) => {
@@ -122,7 +137,6 @@ export default function CompassApp() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 selection:bg-emerald-500 selection:text-white">
-      {/* Mobile constraint container */}
       <div className="max-w-md mx-auto bg-white min-h-screen relative overflow-x-hidden shadow-sm sm:border-x sm:border-gray-100 flex flex-col">
 
         <AnimatePresence mode="wait">
@@ -137,7 +151,6 @@ export default function CompassApp() {
               transition={{ duration: 0.3 }}
               className="min-h-screen flex flex-col bg-white"
             >
-              {/* Top Nav */}
               <div className="flex items-center justify-between px-4 py-3">
                 <button className="p-2 -ml-2 text-gray-900">
                   <ChevronLeft size={24} strokeWidth={2} />
@@ -146,12 +159,10 @@ export default function CompassApp() {
                 <div className="w-10"></div>
               </div>
 
-              {/* Demo Story Toggle */}
               <div className="px-6 pt-4 pb-2">
                 <SegmentedControl mode={mode} onChange={handleModeChange} />
               </div>
 
-              {/* Content */}
               <div className="px-6 pt-6 flex-1">
                 <div className="text-center mb-12">
                   <h1 className="text-[44px] font-bold tracking-tight mb-1 text-gray-900">
@@ -197,7 +208,6 @@ export default function CompassApp() {
                 </div>
               </div>
 
-              {/* Bottom Actions */}
               <div className="p-6 flex gap-3 bg-white sticky bottom-0 border-t border-gray-50 mt-auto z-20">
                 <button className="px-8 py-4 rounded-full border border-gray-200 text-[16px] font-medium text-gray-900 hover:bg-gray-50 transition-colors">
                   Max
@@ -223,7 +233,7 @@ export default function CompassApp() {
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="min-h-screen bg-gray-50 flex flex-col"
             >
-              {/* Fake Navigation Bar */}
+              {/* Nav Bar */}
               <div className="flex items-center px-4 py-3 border-b border-gray-200/60 bg-gray-50/80 backdrop-blur-md sticky top-0 z-30">
                 <button
                   onClick={goToReview}
@@ -238,22 +248,22 @@ export default function CompassApp() {
                 </div>
               </div>
 
-              {/* Header */}
-              <header className="px-6 pt-8 pb-6">
-                <div className="flex items-center gap-3 mb-2">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-900">
+              {/* Compact Header */}
+              <header className="px-6 pt-5 pb-4">
+                <div className="flex items-center gap-2.5 mb-1">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-gray-900">
                     <circle cx="12" cy="12" r="10" />
                     <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
                   </svg>
-                  <h1 className="text-3xl font-medium tracking-tight">Compass</h1>
+                  <h1 className="text-2xl font-semibold tracking-tight">Compass</h1>
                 </div>
-                <p className="text-[15px] text-gray-500 leading-relaxed">
+                <p className="text-[14px] text-gray-500 leading-relaxed">
                   Before you submit, here&apos;s what changes if this executes.
                 </p>
               </header>
 
               {/* Consequence Cards */}
-              <div className="px-6 space-y-4 mb-12">
+              <div className="px-6 space-y-3 mb-8">
                 {isLoading && (
                   <div className="flex flex-col items-center justify-center py-16 gap-3">
                     <Loader2 size={32} className="text-emerald-500 animate-spin" />
@@ -277,21 +287,25 @@ export default function CompassApp() {
                       variants={{
                         visible: {
                           transition: {
-                            staggerChildren: 0.15,
+                            staggerChildren: 0.12,
                           },
                         },
                       }}
-                      className="space-y-4"
+                      className="space-y-3"
                     >
-                      {currentLabels.map((label) => {
-                        const content = data[label.key];
-                        if (!content || Array.isArray(content)) return null;
+                      {currentCards.map((card) => {
+                        const cardData = data[card.key];
+                        if (!cardData || typeof cardData !== 'object' || Array.isArray(cardData)) return null;
+
+                        const typedCard = cardData as CardData;
 
                         return (
                           <CompassCard
-                            key={label.key}
-                            title={label.title}
-                            content={content}
+                            key={card.key}
+                            title={card.title}
+                            heroValue={typedCard.headline}
+                            body={typedCard.body}
+                            severity={card.severity}
                           />
                         );
                       })}
@@ -302,8 +316,8 @@ export default function CompassApp() {
 
               {/* Clarity Checkpoint */}
               {data && !isLoading && (
-                <div className="px-6 pb-32 pt-8">
-                  <div className="flex items-center justify-center gap-4 mb-6">
+                <div className="px-6 pb-28 pt-4">
+                  <div className="flex items-center justify-center gap-4 mb-5">
                     <div className="h-px bg-gray-200 flex-1"></div>
                     <h2 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Clarity Checkpoint</h2>
                     <div className="h-px bg-gray-200 flex-1"></div>
@@ -329,18 +343,19 @@ export default function CompassApp() {
               )}
 
               {/* Fixed Bottom Action */}
-              <div className="sticky bottom-0 left-0 right-0 bg-gradient-to-t from-gray-50 via-gray-50 to-transparent pt-12 pb-8 px-6 z-20 mt-auto">
-                <button
+              <div className="sticky bottom-0 left-0 right-0 bg-gradient-to-t from-gray-50 via-gray-50 to-transparent pt-6 pb-8 px-6 z-20 mt-auto">
+                <motion.button
                   onClick={goToSuccess}
                   disabled={!allChecked || isLoading || !data}
+                  whileTap={allChecked && data ? { scale: 0.97 } : undefined}
                   className={`w-full py-4 rounded-full text-[16px] font-medium transition-all duration-300 ${
                     allChecked && data
-                      ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100 translate-y-0'
-                      : 'bg-gray-200 text-gray-400 cursor-not-allowed translate-y-0'
+                      ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-100'
+                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                   }`}
                 >
                   I Understand — Submit Order
-                </button>
+                </motion.button>
               </div>
             </motion.div>
           )}
@@ -364,10 +379,13 @@ export default function CompassApp() {
                   <CheckCircle2 size={48} className="text-emerald-500" strokeWidth={2.5} />
                 </motion.div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Order Submitted</h2>
-                <p className="text-[15px] text-gray-500 mb-10 leading-relaxed">
+                <p className="text-[15px] text-gray-500 mb-3 leading-relaxed">
                   {mode === 'options'
                     ? "Your order to buy 1 TSLA Mar 21, 2027 $250 Call has been placed successfully."
                     : "Your order to buy 50 shares of TSLA has been placed successfully."}
+                </p>
+                <p className="text-[12px] text-gray-400 mb-10">
+                  Compass reviewed {mode === 'options' ? '7' : '5'} consequence areas before submission.
                 </p>
                 <button
                   onClick={goToReview}
